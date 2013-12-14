@@ -8,11 +8,15 @@
 # Report issue
 
 # Only root can use this script
-[[ $UID == 0 ]] || { echo >&2 "Only root can use this script" ; exit 1; }
+[[ $UID == 0 ]] || { echo >&2 "Only root can use this script"; exit 1; }
 
-arch="$( [[ "$(uname -m)" =~ 'i686' ]] && echo i386 )" # set arch
-root_pas=test123        # set password for mysql root user
+# set arch
+arch="$( [[ "$(uname -m)" =~ 'i686' ]] && echo i386 )" 
+
+# set password for mysql root user
+root_pas=test123        
 set_password='mysqladmin -u root password $root_pas'
+
 # set OS Ubuntu or CentOS/RHEL
 package_manager=$( [[ -x $(command -v yum) ]] && echo "RHEL Based" || echo "Ubuntu Based")
 
@@ -22,6 +26,7 @@ rhel_installation(){
 	{ yum install -y mysql-server mysql.$arch;
 	  mysqladmin status || /etc/init.d/mysqld restart;
           eval $set_password; 
+	  echo  "MySQL Successfully Installed";
 	}
 }
 
@@ -33,6 +38,7 @@ ubunt_installation(){
 	 apt-get -q -y install mysql-server;
 	 mysqladmin status || /etc/init.d/mysqld restart;
          eval $set_password;
+	 echo  "MySQL Successfully Installed";
 	}
 }
 
@@ -55,30 +61,44 @@ ask() {
 	done
 }
 
+
 setup_new_instance(){
 
-	echo  "MySQL Successfully Installed"
 	ask
 	total_instance=$( ls -1d /var/lib/mysql* | wc -l )
 	(( total_instance++ ))
-	i=total_instance
-	port=$[ 3306 + $i ]
-	location=/var/lib/mysql
+	i=$total_instance
+	port=$[ 3305 + $i ]
+	location=/var/lib/mysql${i}
 	logpath=/var/log/mysql${i}
-	[[ -d ${location}${i} ]] && { echo "Already Exists"; exit 1; }
-	mkdir ${location}${i}
-	mkdir /var/log/mysql${i}
-	chown -R mysql. ${location}${i} $logpath
-	cnf=/etc/my${i}.cnf
+	[[ -d ${location} ]] && { echo "Already Exists"; exit 1; }
+	mkdir ${location}
+	mkdir ${logpath}
+	chown -R mysql. ${location} ${logpath}
 	cp /etc/init.d/mysql /etc/init.d/mysql${i}
 	
-	cp /etc/my.cnf $cnf
-	cd /etc/mysql${i}
-	sed -i "s/3306/$port/g" $cnf
-	sed -i "s/mysqld.sock/mysqld$i.sock/g" $cnf
-	sed -i "s/mysqld.pid/mysqld$i.pid/g" $cnf
-	sed -i "s/var\/lib\/mysql/var\/lib\/mysql$i/g" $cnf
-	sed -i "s/var\/log\/mysql/var\/log\/mysql$i/g" $cnf
+        case $package_manager in
+                RHEL*)  cnf=/etc/my${i}.cnf
+			cp /etc/my.cnf $cnf		;;
+                Ubuntu*) cp -R /etc/mysql/ /etc/mysql${i}/
+			 cnf=/etc/mysql${i}/my.cnf 	
+			 appr=/etc/apparmor.d/usr.sbin.mysqld
+			 cp $appr ${appr}${i}
+			 appr=${appr}${i}		
+			 int_conf=/etc/init/mysql${i}.conf 
+			 cp /etc/init/mysql.conf $int_conf ;;
+        esac
+	
+	for config in $cnf $appr $int_conf
+	do
+		sed -i "s/3306/$port/g" $config
+		sed -i "s/mysqld.sock/mysqld$i.sock/g" $config
+		sed -i "s/mysqld.pid/mysqld$i.pid/g" $config
+		sed -i "s/var\/lib\/mysql/var\/lib\/mysql$i/g" $config
+		sed -i "s/var\/log\/mysql/var\/log\/mysql$i/g" $config
+		sed -i "s/etc\/mysql/etc\/mysql2/g" $config
+	done
+	[[ -z $appr ]] || /lib/init/apparmor-profile-load $appr
 	mysql_install_db --user=mysql --datadir=/var/lib/mysql$i/	
 
 }
