@@ -4,7 +4,7 @@ awk 'BEGIN {
 			printf "Disk Usage: %d/%dGB (%s)\n", $3,$2,$5
 		}
 	}
-	while( getline cpu < "/proc/loadavg" ) {
+	while( getline  < "/proc/loadavg" ) {
 		printf "CPU Load: %.2f\n", $(NF-2)
 	}
 	
