@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# Purpose :     If we start JBOSS Server and if server receive connections from clients
-#               then it's unable to start service.
-#               the temparary solution is, block JBOSS Port until it's start successfully.
+# Purpose : If we start JBOSS Server and if server receive connections from clients
+#           then it's unable to start service.
+#           the temparary solution is, block JBOSS Port until it's start successfully.
 
 
 # Date   :  Mon Apr 28 16:06:14 IST 2014
+# Author :  Rahul Patil<http://www.linuxian.com>
 
 
 JBOSS_PORT=80
@@ -25,7 +26,7 @@ Block_Incomming_Request(){
 
         # Block JBOSS_PORT
         # Note: Do not need to start iptables services
-        #               Because after inserting rules, it's start.
+        #       Because after inserting rules, it's start.
 
         $Iptables -L -n -v | grep -q ".*DROP*.*dpt:${JBOSS_PORT}" ||
         $Iptables -I INPUT '!' -s ${Trusted_Network} -p tcp --dport $JBOSS_PORT -j DROP
@@ -64,7 +65,7 @@ Check_Jboss(){
         # Return 0 if JBOSS accepting request and gives HTTP 200
         if curl -I http://${JBOSS_IP} | grep -q 'HTTP/1.1 200 OK'
         then
-                 return 0
+            return 0
         fi
         return 1
 
