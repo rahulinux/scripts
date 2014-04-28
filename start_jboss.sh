@@ -78,6 +78,10 @@ then
 else
         Block_Incomming_Request
         Start_Jboss
-        Allow_Incomming_Request
+
+	until Check_Jboss
+	do
+		Allow_Incomming_Request
+	done
 fi
 
