@@ -30,6 +30,7 @@ Block_Incomming_Request(){
 
         $Iptables -L -n -v | grep -q ".*DROP*.*dpt:${JBOSS_PORT}" ||
         $Iptables -I INPUT '!' -s ${Trusted_Network} -p tcp --dport $JBOSS_PORT -j DROP
+        echo "Blocked ${JBOSS_PORT}"
 }
 
 
@@ -41,6 +42,7 @@ Allow_Incomming_Request(){
 
         $Iptables -L -n -v | grep -q ".*DROP*.*dpt:${JBOSS_PORT}" &&
         $Iptables -D INPUT '!' -s ${Trusted_Network} -p tcp --dport $JBOSS_PORT -j DROP
+        echo "Allowed ${JBOSS_PORT}"
 }
 
 
