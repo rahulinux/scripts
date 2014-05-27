@@ -17,10 +17,7 @@ check_status(){
 	fi
 	
 	exit $?
-
 }
-
-
 
 case "$1" in
 
@@ -28,7 +25,7 @@ case "$1" in
 		echo "Starting Nginx with Chroot"
 		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} 
 		check_status
-        ;;
+	        ;;
   stop)
 		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -s stop
 		check_status
@@ -47,9 +44,9 @@ case "$1" in
 		echo "Nginx restarted"
 		;;
       *)
-        echo "Usage: $INIT_SCRIPT {start|stop|restart|reload"
-        exit 1
-        ;;
+		echo "Usage: $INIT_SCRIPT {start|stop|restart|reload}"
+        	exit 1
+        	;;
 esac
 
 
