@@ -10,30 +10,20 @@ CHROOT_BIN=/usr/sbin/chroot
 
 . /lib/lsb/init-functions
 
-check_status(){
-
-	if [[ $? -ne 0 ]];
-	then 
-		echo "Nginx Chroot " $1 " is unsuccessful. Please contact Administrator"
-	fi
-	
-	exit $?
-}
 
 case "$1" in
 
   start) 
 		log_daemon_msg "Starting Web service" "Nginx"
-		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} 
-		check_status
+		
+		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} &&
+		log_end_msg 0 || log_end_msg 1 
 	        ;;
   stop)
   		log_daemon_msg "Stopping Web service" "Nginx"
-		if ${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -s stop
-		then log_end_msg 0
-		else 
-		     log_end_msg 1
-		fi 
+  		
+		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -s stop &&
+		log_end_msg 0 || log_end_msg 1
 		;;
   status)
 		PID=$(pgrep -f  ${NGINX_BIN})
@@ -77,9 +67,11 @@ case "$1" in
 		;;
  restart)
  		echo -n "Stoping Nginx...."
-		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -s stop && log_end_msg 0 || log_end_msg 1
+		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -s stop && 
+		log_end_msg 0 || log_end_msg 1
 		echo -n "Starting...."
-		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} &&  log_end_msg 0 || log_end_msg 1
+		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} && 
+		log_end_msg 0 || log_end_msg 1
 		;;
       *)
 		log_action_msg "Usage: $INIT_SCRIPT {start|stop|restart|reload|status|test}"
