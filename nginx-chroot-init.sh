@@ -36,7 +36,9 @@ case "$1" in
 		check_status
 		echo "Nginx with chroot reloaded"
 		;;
- 
+  test)
+		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -t
+		;;
  restart)
 		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -s stop
 		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN}
@@ -44,7 +46,7 @@ case "$1" in
 		echo "Nginx restarted"
 		;;
       *)
-		echo "Usage: $INIT_SCRIPT {start|stop|restart|reload}"
+		echo "Usage: $INIT_SCRIPT {start|stop|restart|reload|test}"
         	exit 1
         	;;
 esac
