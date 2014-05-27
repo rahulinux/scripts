@@ -28,8 +28,12 @@ case "$1" in
 		check_status
 	        ;;
   stop)
-		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -s stop
-		check_status
+  		log_daemon_msg "Stopping Web service" "Nginx"
+		if ${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -s stop
+		then log_end_msg 0
+		else 
+		     log_end_msg 1
+		fi 
 		;;
   status)
 		PID=$(pgrep -f  ${NGINX_BIN})
@@ -57,17 +61,23 @@ case "$1" in
 		;;
  
  reload)
-		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -s reload
-		check_status
-		echo "Nginx with chroot reloaded"
+ 		if $INIT_SCRIPT test | grep -q successful
+ 		then
+			${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -s reload
+			log_end_msg 0
+		else
+			log_action_msg "Please test configuration file"
+			log_end_msg 1
+		fi
+		log_action_msg "Nginx with chroot reloaded"
 		;;
   test)
 		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -t
 		;;
  restart)
- 		echo "Stoping Nginx...."
+ 		echo -n "Stoping Nginx...."
 		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -s stop && log_end_msg 0 || log_end_msg 1
-		echo "Starting...."
+		echo -n "Starting...."
 		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} &&  log_end_msg 0 || log_end_msg 1
 		;;
       *)
