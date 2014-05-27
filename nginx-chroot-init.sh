@@ -54,7 +54,6 @@ case "$1" in
 			log_end_msg 0
 		fi
 		
-		check_status
 		;;
  
  reload)
