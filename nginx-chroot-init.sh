@@ -41,16 +41,14 @@ case "$1" in
 			echo "Nginx Running with PID : ${PID}"
 		fi
 		
-		N_STAT=$(netstat -tulnp | grep $(basename ${NGINX_BIN}))
+		N_STAT=$(netstat -tulnp | awk "/$(basename ${NGINX_BIN})/{ print \$4}" )
 		
 		if [[  -z $N_STAT ]]
 		then
 			echo "Nginx not listening..."
 			exit 1
 		else
-			echo "Nginx Listening on:"
-			echo ${N_STAT}
-		
+			echo "Nginx Listening on: ${N_STAT}"
 		fi
 		
 		check_status
