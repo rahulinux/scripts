@@ -44,7 +44,7 @@ case "$1" in
 			log_end_msg 1
 			exit 1
 		else
-			echo "Nginx Running with PID : ${PID}"
+			echo -n "Nginx Running with PID : ${PID}"
 			log_end_msg 0
 		fi
 		
@@ -55,7 +55,7 @@ case "$1" in
 			log_action_msg "Nginx not listening..."
 			log_end_msg  1
 		else
-			echo "Nginx Listening on: ${N_STAT}"
+			echo -n "Nginx Listening on: ${N_STAT}"
 			log_end_msg 0
 		fi
 		
