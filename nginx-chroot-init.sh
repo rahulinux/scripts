@@ -8,6 +8,7 @@ NGINX_CHROOT=/nginx
 NGINX_BIN=/opt/nginx/sbin/nginx
 CHROOT_BIN=/usr/sbin/chroot
 
+. /lib/lsb/init-functions
 
 check_status(){
 
