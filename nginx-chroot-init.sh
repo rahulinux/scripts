@@ -62,7 +62,7 @@ case "$1" in
 		;;
  
  reload)
- 		if $INIT_SCRIPT test | grep -q successful
+ 		if $INIT_SCRIPT test 2>&1 | grep -q successful
  		then
 			${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -s reload
 			log_end_msg 0
