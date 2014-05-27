@@ -42,6 +42,7 @@ case "$1" in
 		then
 			log_action_msg "Nginx not Running.."
 			log_end_msg 1
+			exit 1
 		else
 			echo "Nginx Running with PID : ${PID}"
 			log_end_msg 0
