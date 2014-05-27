@@ -22,7 +22,7 @@ check_status(){
 case "$1" in
 
   start) 
-		echo "Starting Nginx with Chroot"
+		log_daemon_msg "Starting Web service" "Nginx"
 		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} 
 		check_status
 	        ;;
@@ -35,20 +35,22 @@ case "$1" in
 		
 		if [[ -z ${PID} ]]
 		then
-			echo "Nginx not Running.."
-			exit 1
+			log_action_msg "Nginx not Running.."
+			log_end_msg 1
 		else
 			echo "Nginx Running with PID : ${PID}"
+			log_end_msg 0
 		fi
 		
 		N_STAT=$(netstat -tulnp | awk "/$(basename ${NGINX_BIN})/{ print \$4}" )
 		
 		if [[  -z $N_STAT ]]
 		then
-			echo "Nginx not listening..."
-			exit 1
+			log_action_msg "Nginx not listening..."
+			log_end_msg  1
 		else
 			echo "Nginx Listening on: ${N_STAT}"
+			log_end_msg 0
 		fi
 		
 		check_status
@@ -63,13 +65,13 @@ case "$1" in
 		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -t
 		;;
  restart)
-		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -s stop
-		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN}
-		check_status
-		echo "Nginx restarted"
+ 		echo "Stoping Nginx...."
+		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} -s stop && log_end_msg 0 || log_end_msg 1
+		echo "Starting...."
+		${CHROOT_BIN} ${NGINX_CHROOT} ${NGINX_BIN} &&  log_end_msg 0 || log_end_msg 1
 		;;
       *)
-		echo "Usage: $INIT_SCRIPT {start|stop|restart|reload|status|test}"
+		log_action_msg "Usage: $INIT_SCRIPT {start|stop|restart|reload|status|test}"
         	exit 1
         	;;
 esac
