@@ -1,0 +1,39 @@
+---
+  # For Installation of common tools that required
+  - hosts: all
+    vars:
+       packages: [ wget, curl, "http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm" ]
+       #download_url: "http://download.oracle.com/otn-pub/java/jdk/8u45-b14/jdk-8u45-linux-x64.rpm"
+       download_url: http://download.oracle.com/otn-pub/java/jdk/7u71-b14/jdk-7u71-linux-x64.rpm
+       download_folder: /opt
+       #java_archive: "{{download_folder}}/jdk-8u45-linux-x64.rpm"
+       java_archive: "{{download_folder}}/jdk-7u71-linux-x64.rpm"
+       download_folder: /opt
+       #extra_path: '/usr/java/jdk1.8.0_45'
+       extra_path: '/usr/java/jdk1.7.0_71/'
+
+    tasks:
+       - name: Installing base packages
+         yum: name={{ item }} state=present
+         with_items: packages
+
+       - name: Downloading JAVA
+         command: "wget -q -O {{ java_archive }}
+                   --no-check-certificate --no-cookies
+                   --header 'Cookie: oraclelicense=accept-securebackup-cookie'
+                   {{download_url}} creates={{java_archive}}"
+
+       - name: Installing JAVA
+         yum: name={{java_archive}} state=present disable_gpg_check=yes
+
+       - name: Setup ENV for JAVA
+         lineinfile:
+               dest=/etc/bashrc
+               state=present backrefs=yes
+               regexp='export JAVA_HOME.*'
+               line='export JAVA_HOME=/usr/java/jdk1.7.0_71/'
+         lineinfile:
+              dest=/root/.bash_profile
+              state=present backrefs=yes
+              regexp='PATH=(["]*)((?!.*?{{extra_path}}).*?)(["]*)$'
+              line="PATH=\1\2:{{extra_path}}\3"
