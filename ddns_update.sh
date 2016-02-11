@@ -9,7 +9,7 @@
 
 fqdn=test.linuxian.loc
 ipaddr=10.20.10.111
-key_pass='PrWnEMOKfS2HDcObEKPKDQ=='
+key_pass='KAYPASS'
 dns_server='aws-monitor-dns.linuxian.loc'
 zone='linuxian.loc'
 rev_zone='150.21.10.in-addr.arpa'
