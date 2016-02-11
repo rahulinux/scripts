@@ -7,10 +7,10 @@
 # configure fqdn in /etc/hosts before using this script
 
 
-fqdn=test.ugamsolutions.com
-ipaddr=10.20.10.151
+fqdn=test.linuxian.loc
+ipaddr=10.20.10.111
 key_pass='PrWnEMOKfS2HDcObEKPKDQ=='
-dns_server='aws-monitor-dns-dev-crawl.linuxian.loc'
+dns_server='aws-monitor-dns.linuxian.loc'
 zone='linuxian.loc'
 rev_zone='150.21.10.in-addr.arpa'
 
