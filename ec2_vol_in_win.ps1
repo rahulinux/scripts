@@ -2,6 +2,14 @@
 
 # WARNING :: Use this script own risk !! 
 
+# 1. Create Volume in AWS
+# 2. Attach to Current Instance where this script is running
+# 3. Search Offline disk, if not found then exit
+# 4. If Offline disk found then create raw partition
+# 5. Since windows create volume that increment, then this script will find the volume which respective to offline disk which we added.
+# 7. Once volume get detected then it will format that volume with NTFS
+# 8. Finally assign volume letter 
+
 # Global variables
 #$volumeSize= $env:EBS_VOLUME_SIZE
 #$driveLetter = $env:EBS_DRIVE_LETTER
