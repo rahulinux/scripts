@@ -2,13 +2,16 @@
 
 # WARNING :: Use this script own risk !! 
 
-# 1. Create Volume in AWS
-# 2. Attach to Current Instance where this script is running
-# 3. Search Offline disk, if not found then exit
-# 4. If Offline disk found then create raw partition
-# 5. Since windows create volume that increment, then this script will find the volume which respective to offline disk which we added.
-# 7. Once volume get detected then it will format that volume with NTFS
-# 8. Finally assign volume letter 
+# 1. Check Current running instance has EBS volume, if already attached then exit
+# 2. if no EBS then Create Volume in AWS
+# 3. Attach to Current Instance where this script is running
+# 4. Add tags to volumes
+# 5. Change instance attribute to Delete Volume on termination
+# 6. Search Offline disk, if not found then exit
+# 7. If Offline disk found then create raw partition
+# 8. Since windows create volume that increment, then this script will find the volume which respective to offline disk which we added.
+# 9. Once volume get detected then it will format that volume with NTFS
+# 10. Finally assign volume letter 
 
 # Global variables
 #$volumeSize= $env:EBS_VOLUME_SIZE
@@ -18,31 +21,78 @@
 #$Region = $env:REGION
 
 $volumeSize= "4" 
+$volumeType = "standard" 
 $driveLetter = "E:" 
-$awsSecretKey =  "AKIAIAUHWCPWPUPHKDPA"
-$awsAccessKey = "SECRETE_KEY"
-
-# Connect AWS 
-Initialize-AWSDefaults -AccessKey $awsSecretKey -SecretKey $awsAccessKey -Region $Region
+$awsSecretKey =  "AKHSKJDH2839DHFAKE"
+$awsAccessKey = "asdflksajflajsdlfjaslf2034SECRET"
 
 # Get details 
 $InstanceId = (Invoke-WebRequest '169.254.169.254/latest/meta-data/instance-id').Content
 $AZ = (Invoke-WebRequest '169.254.169.254/latest/meta-data/placement/availability-zone').Content
 $Region = $AZ.Substring(0, $AZ.Length -1)
 
-# Create EBS volume 
-$volume = New-EC2Volume -Size $volumeSize -AvailabilityZone $AZ -VolumeType standard
+# Connect AWS 
+Initialize-AWSDefaults -AccessKey $awsSecretKey -SecretKey $awsAccessKey -Region $Region
 
-While ($volume.Status -ne 'available')
-{
-  $volume = Get-EC2Volume -VolumeId $volume.volumeId
-  Start-Sleep -Seconds 15
+$volumes = @(get-ec2volume) | ? { $_.Attachments.InstanceId -eq $InstanceId}
+
+if ($($volumes.length) -gt 1){
+    Write-Host "Volume exists, skipping Create and Attach."
+    Write-Host "volumes: $($volumes)"
+    exit 
+} else {
+
+    Write-Host "Creating Volume.."
+
+    # Create EBS volume 
+    $volume = New-EC2Volume -Size $volumeSize -AvailabilityZone $AZ -VolumeType $volumeType
+
+
+    While ($volume.Status -ne 'available')
+    {
+       $volume = Get-EC2Volume -VolumeId $volume.volumeId
+       Write-Host "Wating for volume to be available $volume.volumeId"
+       Start-Sleep -Seconds 15
+    }
+  
+    # Attach volume  
+    Add-EC2Volume -VolumeId $volume.VolumeId –InstanceId $InstanceId -Device '/dev/xvdg'
+
+    $spec = New-Object Amazon.EC2.Model.InstanceBlockDeviceMappingSpecification
+    $spec.DeviceName = "/dev/xvdg"
+    $spec.Ebs = New-Object Amazon.EC2.Model.EbsInstanceBlockDeviceSpecification
+    $spec.Ebs.DeleteOnTermination = $true
+
+    Edit-EC2InstanceAttribute -InstanceId $InstanceId -BlockDeviceMapping $spec
+    
+    Write-Host $volume
+
+    #Tags for EBS Volume 
+    
+    $Tags = @()
+    
+    $CostCenter = New-Object Amazon.EC2.Model.Tag
+    $CostCenter.Key = "Cost-Center"
+    $CostCenter.Value = "$financecostcenter"
+    $Tags += $CostCenter
+        
+    $ProjectID = New-Object Amazon.EC2.Model.Tag
+    $ProjectID.Key = "Project-ID"
+    $ProjectID.Value = "$financeprojectid"
+    $Tags += $ProjectID
+      
+    $BackupTag = New-Object Amazon.EC2.Model.Tag
+    $BackupTag.Key = "Backup"
+    $BackupTag.Value = "$backup"
+    $Tags += $BackupTag
+      
+    Write-Host "Setting EC2 Tags"
+    New-EC2Tag -ResourceId $volume.VolumeId -Region $Region -Tags $Tags
+       
 }
 
-# Attach volume 
-Add-EC2Volume -VolumeId $volume.VolumeId –InstanceId $InstanceId -Device 'xvdg'
-
-echo $InstanceId
+# wait for 15 seconds to attach the disk 
+# Start-Sleep -s 15
 
 # Check if offline disk available or not, if not then exit 
 @"
@@ -65,12 +115,12 @@ if ( $count -ge 1 )
 ## Get Disk number of offline disk 
 Get-Content disk_status | ForEach-Object{
     $split = $_ -split " "
-	$columne_2 = $split[2]  -replace "`t|`n|`r",""
-	$columne_3 = $split[3]  -replace "`t|`n|`r",""
-	if ($_ -match "Offline"){
-	   $offline_disk = $columne_3
-	   echo $offline_disk
-	}
+    $columne_2 = $split[2]  -replace "`t|`n|`r",""
+    $columne_3 = $split[3]  -replace "`t|`n|`r",""
+    if ($_ -match "Offline"){
+       $offline_disk = $columne_3
+       echo $offline_disk
+    }
 }
 
 # Adding disk part commands to file 
@@ -96,19 +146,20 @@ diskpart /S .\added_vol > check_vol
 ## Get volume number of new disk 
 Get-Content check_vol | ForEach-Object{
     $split = $_ -split " "
-	$vol_columne_2 = $split[2]  -replace "`t|`n|`r",""
-	$vol_columne_3 = $split[3]  -replace "`t|`n|`r",""
-	if ($_ -match "partition"){
-	   $new_volume = $vol_columne_3
-	   echo $new_volume
-	}
+    $vol_columne_2 = $split[2]  -replace "`t|`n|`r",""
+    $vol_columne_3 = $split[3]  -replace "`t|`n|`r",""
+    if ($_ -match "RAW"){
+       $new_volume = $vol_columne_3
+       Write-Host "Raw Partition found at volume $new_volume"
+       
+    }
 }
 
 # Format newly added volume 
 @"
 select disk $offline_disk
-format FS=NTFS LABEL=TEST-DRIVE UNIT=64K QUICK NOERR
 select volume $new_volume
+format FS=NTFS LABEL=TEST-DRIVE UNIT=64K QUICK NOERR
 assign mount=$driveLetter
 "@ | Out-File "format_vol" -Encoding ascii 
 
