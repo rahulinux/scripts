@@ -91,8 +91,9 @@ if ($($volumes.length) -gt 1){
        
 }
 
-# wait for 15 seconds to attach the disk 
-# Start-Sleep -s 15
+# wait for 10 seconds to attach the disk 
+Write-Host "Waiting for disk attachment"
+Start-Sleep -s 10
 
 # Check if offline disk available or not, if not then exit 
 @"
