@@ -26,6 +26,15 @@ $driveLetter = "E:"
 $awsSecretKey =  "AKHSKJDH2839DHFAKE"
 $awsAccessKey = "asdflksajflajsdlfjaslf2034SECRET"
 
+# Check all disk before adding 
+
+@"
+list disk
+"@ | Out-File "disk_list" -Encoding ascii 
+
+diskpart /S disk_list | ?{$_ -match "Online"} | %{($_ -split "\s+")[2]} > before
+
+
 # Get details 
 $InstanceId = (Invoke-WebRequest '169.254.169.254/latest/meta-data/instance-id').Content
 $AZ = (Invoke-WebRequest '169.254.169.254/latest/meta-data/placement/availability-zone').Content
@@ -93,36 +102,24 @@ if ($($volumes.length) -gt 1){
 
 # wait for 10 seconds to attach the disk 
 Write-Host "Waiting for disk attachment"
-Start-Sleep -s 10
+Start-Sleep -s 15
 
 # Check if offline disk available or not, if not then exit 
 @"
 list disk
-list volume
 "@ | Out-File "list_disk.txt" -Encoding ascii 
 diskpart /S .\list_disk.txt  > disk_status
-$wordToFind = "Offline"
-$input_file = "disk_status"
-$count = @( Get-Content $input_file | Where-Object { $_.Contains("$wordToFind") } ).Count
-if ( $count -ge 1 )
-{
-   echo "Offline disk found"
-} else {
 
-   echo "No Offline Disk"
+diskpart /S .\list_disk.txt | ?{$_ -match "Online"} | %{($_ -split "\s+")[2]} > after
+
+$offline_disk = diff (Get-Content before) (Get-Content after) | foreach {$_.InputObject} | ?{$_ -match "Online"} | %{($_ -split "\s+")[2]}
+
+if (!$offline_disk){
+  
+   Write-Host "No new disk found"
    exit 
 }
 
-## Get Disk number of offline disk 
-Get-Content disk_status | ForEach-Object{
-    $split = $_ -split " "
-    $columne_2 = $split[2]  -replace "`t|`n|`r",""
-    $columne_3 = $split[3]  -replace "`t|`n|`r",""
-    if ($_ -match "Offline"){
-       $offline_disk = $columne_3
-       echo $offline_disk
-    }
-}
 
 # Adding disk part commands to file 
 @"
