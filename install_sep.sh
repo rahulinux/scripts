@@ -1,10 +1,14 @@
 #!/bin/bash
 
 
+## Global vars
+sep_url='http://path/SymantecEndpointProtection.zip'
+pkgs=( wget unzip )
+
 info(){
 
    tput bold
-   tput setaf 2 
+   tput setaf 2
    echo "${@}"
    tput sgr 0
 
@@ -24,10 +28,18 @@ fail() {
     local char=${#msg}
     local col_size=$(( $(tput cols) - 45))
     local col=$(( col_size - char))
-    printf '%s%*s%s\n' $(tput bold ) $(tput setaf 1) "${@}" $col "[ failed ]"
+    printf '%s%*s%s\n' $(tput bold ; tput setaf 1)"${@}" $col "[ Failed  ]"
     tput sgr 0
 }
 
+warn() {
+    local msg="${@}"
+    local char=${#msg}
+    local col_size=$(( $(tput cols) - 45))
+    local col=$(( col_size - char))
+    printf '%s%*s%s\n' $(tput bold ; tput setaf 4)"${@}" $col "[  SKIPP  ]"
+    tput sgr 0
+}
 
 detect_os(){
 
@@ -43,10 +55,10 @@ detect_os(){
         _OS=unknown
        fail "OS detected.... [$_OS]"
        return 1
-        
+
     fi
     success "OS detected.... [$_OS]"
-    
+
 }
 
 detect_os_type(){
@@ -66,27 +78,57 @@ detect_os_type(){
 
 redhat(){
 
+
+    info "Installing deps"
+
+    for pkg in ${pkgs[@]}
+    do
+       info "Installing deps :: $pkg"
+       if ! rpm -qa | grep -q $pkg
+       then
+           yum install -y $pkg
+           success "Installed :: $pkg"
+       else
+           warn "Already Installed :: $pkg"
+       fi
+    done
+
     info "Installing Java"
-    if type -p java 2>/dev/null
+    if type -p java >/dev/null 2>&1
     then
-       fail "Java already installed"
+       warn "Java already installed"
     else
-       wget -q -O /opt/jdk-7u71-linux-x64.rpm \
-           --no-check-certificate --no-cookies \
-           --header 'Cookie: oraclelicense=accept-securebackup-cookie' \
-           http://download.oracle.com/otn-pub/java/jdk/7u71-b14/jdk-7u71-linux-x64.rpm 
-       rpm -Ubht /opt/jdk-7u71-linux-x64.rpm
+       if [[ ! -f /opt/jdk-7u71-linux-x64.rpm ]]
+       then
+           wget -q -O /opt/jdk-7u71-linux-x64.rpm \
+               --no-check-certificate --no-cookies \
+               --header 'Cookie: oraclelicense=accept-securebackup-cookie' \
+               http://download.oracle.com/otn-pub/java/jdk/7u71-b14/jdk-7u71-linux-x64.rpm
+       fi
+       rpm -Uvh /opt/jdk-7u71-linux-x64.rpm
        printf 'export JAVA_HOME=/usr/java/jdk1.7.0_71/\nexport PATH=$PATH:/usr/java/jdk1.7.0_71/\n' \
           > /etc/profile.d/java.sh
+
     fi
+
+    info "Downloading sementec antivirus"
+
+    cd /opt/
+    #if [[ ! -f SymantecEndpointProtection.zip ]]
+    #then
+    #    wget -cnd $sep_url
+    #fi
+
+
+
 
 }
 
 main(){
-   
+
    detect_os
    detect_os_type
-   case $_OS in 
+   case $_OS in
       redhat) redhat ;;
       ubuntu) echo ubuntu ;;
            *) fail "unkown OS"; exit 1 ;;
