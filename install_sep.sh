@@ -11,7 +11,9 @@ java_url=http://download.oracle.com/otn-pub/java/jdk/7u71-b14/jdk-7u71-linux-x64
 java_home=/usr/java/jdk1.7.0_71
 
 ## DEB
-java_home_deb=/usr/lib/jvm/java-7-openjdk-amd64/jre/
+java_url_deb=http://localhost/jdk-8u91-linux-x64.tar.gz
+#java_url_deb=http://download.oracle.com/otn-pub/java/jdk/8u91-b14/jdk-8u91-linux-x64.tar.gz
+java_home_deb=/usr/local/java/jdk1.8.0_91/
 
 info(){
 
@@ -124,14 +126,14 @@ redhat(){
 sep(){
     info "Downloading sementec antivirus"
     sep_file=SymantecEndpointProtection.zip
-    [[ -d $sep_home ]] || mkdir $sep_home
-    cd $sep_home
+    [[ -d $sep_tmp ]] || mkdir $sep_tmp
+    cd $sep_tmp
     if [[ ! -f $sep_file ]]
     then
         wget -cnd $sep_url
     fi
     [[ ! -d Configuration ]] && unzip SymantecEndpointProtection.zip
-    bash ./install.sh
+    bash  ./install.sh -i
 }
 
 ubuntu(){
@@ -151,17 +153,41 @@ ubuntu(){
     done
 
     info "Installing Java"
-    if type -p java >/dev/null 2>&1
+    if [[ -x $java_home_deb/bin/java ]] 
     then
        warn "Java already installed"
     else
-       apt-get install openjdk-7-jdk -y 
-       printf "export JAVA_HOME=$java_home/\nexport PATH=\$PATH:$java_home_deb/bin\n" \
+       base=$( dirname $java_home_deb)
+       [[ -d $base ]] ||  mkdir $base
+       cd $base
+       wget  \
+           --no-check-certificate --no-cookies \
+           --header 'Cookie: oraclelicense=accept-securebackup-cookie' \
+           $java_url_deb 
+       tar -xzf *.tar.gz
+       printf "export JAVA_HOME=$java_home_deb/\nexport PATH=\$PATH:$java_home_deb/bin\n" \
           > /etc/profile.d/java.sh
-       sudo update-alternatives --install /usr/bin/java java $java_home_deb/bin java 1
     
     fi
 
+    update-alternatives --install /usr/bin/java java $java_home_deb/bin/java 1
+    cd /tmp/
+    if [[ ! -f $java_home_deb/jre/lib/security/local_policy.jar-bkp ]] 
+    then 
+       wget \
+        --no-cookies \
+        --no-check-certificate \
+        --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" \
+        -O UnlimitedJCEPolicyJDK7.zip \
+        http://download.oracle.com/otn-pub/java/jce/7/UnlimitedJCEPolicyJDK7.zip
+        unzip UnlimitedJCEPolicyJDK7.zip
+        [[ -f $java_home_deb/jre/lib/security/local_policy.jar-bkp ]] || cp $java_home_deb/jre/lib/security/local_policy.jar{,-bkp}
+        [[ -f $java_home_deb/jre/lib/security/US_export_policy.jar-bkp ]] || cp $java_home_deb/jre/lib/security/US_export_policy.jar{,-bkp}
+        /bin/cp -f UnlimitedJCEPolicy/local_policy.jar $java_home_deb/jre/lib/security/local_policy.jar
+        /bin/cp -f UnlimitedJCEPolicy/US_export_policy.jar $java_home_deb/jre/lib/security/US_export_policy.jar
+    fi
+    chown 0:0 -R $java_home_deb
+    #update-alternatives --install 
     sep
 }
 
