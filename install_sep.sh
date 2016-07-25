@@ -6,14 +6,10 @@ sep_url='http://localhost/SymantecEndpointProtection.zip'
 pkgs=( wget unzip )
 sep_tmp=/tmp/sep/
 
-## RHEL
-java_url=http://download.oracle.com/otn-pub/java/jdk/7u71-b14/jdk-7u71-linux-x64.rpm
-java_home=/usr/java/jdk1.7.0_71
 
-## DEB
-java_url_deb=http://localhost/jdk-8u91-linux-x64.tar.gz
-#java_url_deb=http://download.oracle.com/otn-pub/java/jdk/8u91-b14/jdk-8u91-linux-x64.tar.gz
-java_home_deb=/usr/local/java/jdk1.8.0_91/
+java_url=http://download.oracle.com/otn-pub/java/jdk/8u91-b14/jdk-8u91-linux-x64.tar.gz
+#java_url=http://localhost/jdk-8u91-linux-x64.tar.gz
+java_home=/usr/local/java/jdk1.8.0_91/
 
 info(){
 
@@ -86,6 +82,77 @@ detect_os_type(){
     success "OS Type detected.... [$_OS_TYPE]"
 }
 
+
+
+install_java(){
+
+    info "Installing Java"
+    if [[ -x $java_home/bin/java ]]
+    then
+       warn "Java already installed"
+    else
+       base=$( dirname $java_home)
+       [[ -d $base ]] ||  mkdir $base
+       cd $base
+       wget  \
+           --no-check-certificate --no-cookies \
+           --header 'Cookie: oraclelicense=accept-securebackup-cookie' \
+           $java_url
+       if [[ $? -ne 0 ]]
+       then
+           echo "Unable to download JAVA $java_url"
+           exit 1
+       fi
+       tar -xzf *.tar.gz
+       printf "export JAVA_HOME=$java_home/\nexport PATH=\$PATH:$java_home/bin\n" \
+          > /etc/profile.d/java.sh
+
+    fi
+
+    update-alternatives --install /usr/bin/java java $java_home/bin/java 1
+    cd /tmp/
+    if [[ ! -f $java_home/jre/lib/security/local_policy.jar-bkp ]]
+    then
+       if [[ ! -f UnlimitedJCEPolicyJDK7.zip ]]
+       then
+          wget \
+           --no-cookies \
+           --no-check-certificate \
+           --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" \
+           -O UnlimitedJCEPolicyJDK7.zip \
+           http://download.oracle.com/otn-pub/java/jce/7/UnlimitedJCEPolicyJDK7.zip
+        [[ -d UnlimitedJCEPolicy ]] || unzip UnlimitedJCEPolicyJDK7.zip
+        [[ -f $java_home/jre/lib/security/local_policy.jar-bkp ]] || cp $java_home/jre/lib/security/local_policy.jar{,-bkp}
+        [[ -f $java_home/jre/lib/security/US_export_policy.jar-bkp ]] || cp $java_home/jre/lib/security/US_export_policy.jar{,-bkp}
+        /bin/cp -f UnlimitedJCEPolicy/local_policy.jar $java_home/jre/lib/security/local_policy.jar
+        /bin/cp -f UnlimitedJCEPolicy/US_export_policy.jar $java_home/jre/lib/security/US_export_policy.jar
+       fi
+    fi
+    chown 0:0 -R $java_home
+
+}
+
+sep(){
+    install_java
+    info "Downloading sementec antivirus"
+    sep_file=SymantecEndpointProtection.zip
+    [[ -d $sep_tmp ]] || mkdir $sep_tmp
+    cd $sep_tmp
+    if [[ ! -f $sep_file ]]
+    then
+        wget -cnd $sep_url
+                if [[ $? -ne 0 ]]
+                then
+                   echo "Unable to download SymantecEndpointProtection"
+                   echo "Please place file in $sep_tmp/ or change link in script"
+                   exit 1
+                fi
+    fi
+    [[ ! -d Configuration ]] && unzip SymantecEndpointProtection.zip
+    bash  ./install.sh -i
+}
+
+
 redhat(){
 
 
@@ -102,38 +169,7 @@ redhat(){
            warn "Already Installed :: $pkg"
        fi
     done
-
-    info "Installing Java"
-    if type -p java >/dev/null 2>&1
-    then
-       warn "Java already installed"
-    else
-       if [[ ! -f /opt/$( basename $java_url ) ]]
-       then
-           wget -q -O /opt/jdk-7u71-linux-x64.rpm \
-               --no-check-certificate --no-cookies \
-               --header 'Cookie: oraclelicense=accept-securebackup-cookie' \
-               $java_url 
-       fi
-       rpm -Uvh /opt/$( basename $java_url )
-       printf "export JAVA_HOME=/usr/java/jdk1.7.0_71/\nexport PATH=\$PATH:$java_home/bin/\n" \
-          > /etc/profile.d/java.sh
-
-    fi
-}
-
-
-sep(){
-    info "Downloading sementec antivirus"
-    sep_file=SymantecEndpointProtection.zip
-    [[ -d $sep_tmp ]] || mkdir $sep_tmp
-    cd $sep_tmp
-    if [[ ! -f $sep_file ]]
-    then
-        wget -cnd $sep_url
-    fi
-    [[ ! -d Configuration ]] && unzip SymantecEndpointProtection.zip
-    bash  ./install.sh -i
+    sep
 }
 
 ubuntu(){
@@ -152,42 +188,6 @@ ubuntu(){
        fi
     done
 
-    info "Installing Java"
-    if [[ -x $java_home_deb/bin/java ]] 
-    then
-       warn "Java already installed"
-    else
-       base=$( dirname $java_home_deb)
-       [[ -d $base ]] ||  mkdir $base
-       cd $base
-       wget  \
-           --no-check-certificate --no-cookies \
-           --header 'Cookie: oraclelicense=accept-securebackup-cookie' \
-           $java_url_deb 
-       tar -xzf *.tar.gz
-       printf "export JAVA_HOME=$java_home_deb/\nexport PATH=\$PATH:$java_home_deb/bin\n" \
-          > /etc/profile.d/java.sh
-    
-    fi
-
-    update-alternatives --install /usr/bin/java java $java_home_deb/bin/java 1
-    cd /tmp/
-    if [[ ! -f $java_home_deb/jre/lib/security/local_policy.jar-bkp ]] 
-    then 
-       wget \
-        --no-cookies \
-        --no-check-certificate \
-        --header "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" \
-        -O UnlimitedJCEPolicyJDK7.zip \
-        http://download.oracle.com/otn-pub/java/jce/7/UnlimitedJCEPolicyJDK7.zip
-        unzip UnlimitedJCEPolicyJDK7.zip
-        [[ -f $java_home_deb/jre/lib/security/local_policy.jar-bkp ]] || cp $java_home_deb/jre/lib/security/local_policy.jar{,-bkp}
-        [[ -f $java_home_deb/jre/lib/security/US_export_policy.jar-bkp ]] || cp $java_home_deb/jre/lib/security/US_export_policy.jar{,-bkp}
-        /bin/cp -f UnlimitedJCEPolicy/local_policy.jar $java_home_deb/jre/lib/security/local_policy.jar
-        /bin/cp -f UnlimitedJCEPolicy/US_export_policy.jar $java_home_deb/jre/lib/security/US_export_policy.jar
-    fi
-    chown 0:0 -R $java_home_deb
-    #update-alternatives --install 
     sep
 }
 
