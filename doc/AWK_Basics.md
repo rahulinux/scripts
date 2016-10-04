@@ -424,12 +424,12 @@ Lets tranform this into awk script
 ```
 #!/usr/bin/awk -f
 BEGIN {
-FS=":"
+     FS=":"
 }
 {
-if ($2 == ""){
-print "No passwd for user: ", $1;
-}
+     if ($2 == ""){
+        print "No passwd for user: ", $1;
+     }
 }
 ```
 
