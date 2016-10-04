@@ -433,6 +433,12 @@ BEGIN {
 }
 ```
 
+Run script 
+
+```
+awk -f scripname.awk
+```
+
 
 **11. Change the output seperator**
 
