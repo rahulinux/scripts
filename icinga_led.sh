@@ -6,7 +6,7 @@
 
 LED_API_URL="http://CHANGE_THIS/api/CHANGE_THIS/lights/1/state"
 ICINGA_HOST=https://icinga2:5665
-ICINGA_QUERY="$ICINGA_HOST/v1/objects/services?attrs=display_name&joins=host.address&filter=service.state"
+ICINGA_QUERY="$ICINGA_HOST/v1/objects/comments"
 ICINGA_USER=USER
 ICINGA_PASSWORD=PASSWORD
 
@@ -26,14 +26,26 @@ led_purple() {
    curl -X PUT -d '{"bri":150, "hue":56100}' $LED_API_URL
 }
 
+get_icinga_data() {
+  local curl_opts="-s -k -u $ICINGA_USER:$ICINGA_PASSWORD"
+  local more_filters=$1
+  local filters="service.acknowledgement!=0&&service.acknowledgement_expiry==0&&$more_filters"
+  curl $curl_opts -H 'Accept: application/json' \
+     -H 'X-HTTP-Method-Override: GET' \
+     -X POST $ICINGA_QUERY -d '
+     {
+     	"joins": ["service.name", "service.acknowledgement", "service.acknowledgement_expiry"],
+     	"attrs": ["author", "text"],
+     	"filter": "'$filters'",
+     	"pretty": true
+    }'
+}
+
 
 check_status() {
-  local curl_opts="-s -k -u $ICINGA_USER:$ICINGA_PASSWORD"
   for s in {1..3}
   do
-    if [[ "$(curl $curl_opts $ICINGA_QUERY==$s)" != '{"results":[]}' ]] &&
-       curl $curl_opts "$ICINGA_QUERY==$s&attrs=acknowledgement" | \
-       grep -q '"acknowledgement":0.0'
+    if [[ "$(get_icinga_data "service.state==$s")" != '{"results":[]}' ]]
     then
       echo $s
       return
